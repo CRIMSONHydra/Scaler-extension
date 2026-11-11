@@ -160,8 +160,8 @@ test("the picker: From/To range, shift-click, then Start sends the chosen lectur
   assert.deepEqual(
     plain(msg.job.lectures.map((l) => [l.index, l.classId, l.url])),
     [
-      [1, "101", "https://www.scaler.com/academy/mentee-dashboard/class/101/session"],
-      [3, "103", "https://www.scaler.com/academy/mentee-dashboard/class/103/session"],
+      [1, "101", "https://www.scaler.com/academy/mentee-dashboard/class/101/session?joinSession=1"],
+      [3, "103", "https://www.scaler.com/academy/mentee-dashboard/class/103/session?joinSession=1"],
     ],
   );
   assert.equal(doc.getElementById("scaler-bulk-download-modal"), null, "picker closes on start");
@@ -228,4 +228,23 @@ test("a row that leads with icon text is still read whole", () => {
     ["11 AUG | 03:45 PM", "Introduction to DevOps & Microservices", "101"],
     ["18 AUG | 05:45 PM", "DevOps Lab 2", "104"],
   ]);
+});
+
+// ── Scaler's real markup (tests/fixtures/scaler-class-row.html) ──────────────
+
+test("real Scaler class-list rows: mixed-case stamp, CSS-free pipe span, title link", () => {
+  const raw = require("fs")
+    .readFileSync(require("path").join(__dirname, "fixtures/scaler-class-row.html"), "utf8")
+    .replace(/<!--[\s\S]*?-->/, "")
+    .trim();
+  // Two rows, as on the page: the second with another id/title/time.
+  const second = raw.replace(/567320/g, "567321").replace("Linux Fundamentals", "DevOps Lab 1").replace("09:35 AM", "11:30 AM");
+  const { window } = load([raw, second]);
+  const rows = window.findLectureRows(window.document);
+  assert.deepEqual(plain(rows.map((r) => [r.index, r.stamp, r.title, r.classId])), [
+    [1, "13 AUG | 09:35 AM", "Linux Fundamentals", "567320"],
+    [2, "13 AUG | 11:30 AM", "DevOps Lab 1", "567321"],
+  ]);
+  window.initBulkDownload();
+  assert.ok(window.document.getElementById("scaler-bulk-download-bar"), "bar injected above the real rows");
 });
