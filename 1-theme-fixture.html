@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>player fixture</title>
+<!--
+  Mimics the Scaler lecture page: a light dashboard shell under a dark fixed
+  overlay holding a black player (colour bars as the video frame), a white
+  playlist panel, a white chat panel with a dark button, and a dark icon rail.
+  ?engine=<file:// URL of a themeManager.js> picks the engine; default is the
+  branch's copy. Then run `applyTheme("dark")` in the console.
+-->
+<style>
+  body { margin: 0; background: #ffffff; font-family: sans-serif; }
+  #shell { padding: 20px; color: #222; }
+  #overlay { position: fixed; inset: 0; background: #121212; display: flex; flex-direction: column; }
+  #topbar { height: 48px; background: #1f1f1f; color: #fff; display: flex; align-items: center; padding: 0 12px; }
+  #main { flex: 1; display: flex; }
+  #player { position: relative; flex: 1; background: #000; }
+  #player video { width: 640px; height: 360px; display: block; margin: 20px; object-fit: fill; }
+  #controls { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; color: #fff; display: flex; align-items: center; padding: 0 12px; }
+  #playlist { position: absolute; right: 20px; top: 20px; width: 220px; height: 200px; background: #fff; color: #111; padding: 8px; }
+  #chat { width: 300px; background: #fff; color: #111; padding: 12px; }
+  #notice { background: #1e2a4a; color: #fff; padding: 12px; border-radius: 6px; height: 40px; }
+  #rail { width: 70px; background: #2b2b2b; }
+</style>
+</head>
+<body>
+<div id="shell">Dashboard shell text</div>
+<div id="overlay">
+  <div id="topbar">Lecture | Final DevOps Project &amp; Troubleshooting_1</div>
+  <div id="main">
+    <div id="player">
+      <video id="v" muted></video>
+      <div id="controls">&#9654; 00:00 / 00:00</div>
+      <div id="playlist"><h3>Playlist</h3><div>Part 1 · 15 minutes</div><div>Part 2 · 99 minutes</div></div>
+    </div>
+    <div id="chat"><div id="notice">Notice Board</div><p>No messages yet</p></div>
+    <div id="rail"></div>
+  </div>
+</div>
+<script>
+  const c = document.createElement("canvas");
+  c.width = 640; c.height = 360;
+  const x = c.getContext("2d");
+  ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#ffffff", "#808080"]
+    .forEach((col, i) => { x.fillStyle = col; x.fillRect(i * 80, 0, 80, 360); });
+  document.getElementById("v").poster = c.toDataURL();
+  window.chrome = { runtime: { id: "fixture" } };
+  const engine = new URLSearchParams(location.search).get("engine") ||
+    "file:///home/navi/repos/scaler++/Scaler-extension/extension-main/content/features/themeManager.js";
+  const s = document.createElement("script");
+  s.src = engine;
+  document.body.appendChild(s);
+</script>
+</body>
+</html>
