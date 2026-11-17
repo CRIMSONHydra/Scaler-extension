@@ -16,7 +16,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "settingsUpdated") {
     currentSettings = { ...DEFAULT_SETTINGS, ...message.settings };
     applyAllSettings();
-    if (typeof applyTheme === "function") applyTheme(currentSettings.theme);
+    if (typeof initVimMode === "function") initVimMode();
+    if (typeof applyThemeIfChanged === "function") applyThemeIfChanged(currentSettings.theme);
     sendResponse({ success: true });
   } else if (message.action === "toggleSetting") {
     // Handle individual toggle change
@@ -111,19 +112,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (value) {
         initContestLeaderboard();
       } else {
-        // Remove injected leaderboard links by reloading the page
-        // or simply disconnect the observer
-        if (window._leaderboardObserver) {
-          window._leaderboardObserver.disconnect();
-          window._leaderboardObserver = null;
-        }
+        // Injected links stay until reload; stop watching for new ones.
+        stopContestLeaderboard();
       }
     } else if (key === "spotlight-search") {
       if (!value && typeof closeSpotlight === "function") {
         closeSpotlight();
       }
-    } else if (key === "vim-mode") {
-      if (typeof setVimEnabled === "function") setVimEnabled(value);
+    } else if (key === "vim-mode" || key === "vim-paste") {
+      // Re-syncs vim with the settings; the enable message carries the paste flag.
+      if (typeof initVimMode === "function") initVimMode();
     } else if (key === "theme") {
       // Site-wide theme switch — value is a theme id ("off", "dark", ...)
       if (typeof applyTheme === "function") applyTheme(value);
@@ -177,8 +175,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (value) {
         if (typeof initAssignmentExport === "function") initAssignmentExport();
       } else {
-        // teardown assignment-export: remove buttons
-        document.querySelectorAll('[data-assignment-export-injected], .scaler-export-question').forEach(el => el.remove());
+        if (typeof teardownAssignmentExport === "function") teardownAssignmentExport();
       }
     } else if (key === "lecture-summary") {
       if (value) {
@@ -293,11 +290,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 // URL change hooks for features
 // ============================================
 
-// Extend handleUrlChange to support problemSearch + leetcodeLink + practiceMode
-const _baseHandleUrlChange = handleUrlChange;
-handleUrlChange = function () {
-  _baseHandleUrlChange();
-
+// Runs once per real URL change, after urlObserver's debounce. Wrapping
+// handleUrlChange instead ran all of this on every call to it, before the
+// debounce: several times per navigation, and on same-URL replaceState too.
+onUrlChange(() => {
   // Reset search bar state on navigation
   searchBarInjected = false;
   isSearchActive = false;
@@ -342,19 +338,15 @@ handleUrlChange = function () {
     }
   }, 1700);
 
-  // Re-initialize Subject Sort on curriculum navigation
-  if (window.location.href.includes("/core-curriculum")) {
-    setTimeout(initSubjectSort, 1500);
-  }
+  // Subject Sort: sorts on curriculum pages, stops its observer elsewhere
+  setTimeout(initSubjectSort, 1500);
 
   // Bulk download bar: added on a class list, torn down everywhere else
   setTimeout(initBulkDownload, 1500);
 
-  // Re-initialize Contest Leaderboard on contest navigation
-  if (isContestPage()) {
-    setTimeout(initContestLeaderboard, 2000);
-  }
+  // Contest Leaderboard: watches contest pages, stops its observer elsewhere
+  setTimeout(initContestLeaderboard, 2000);
 
   // Re-initialize Problem Picker on dashboard
   setTimeout(initProblemPicker, 1500);
-};
+});
